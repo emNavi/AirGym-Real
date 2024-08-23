@@ -31,7 +31,7 @@ vecenv.register('AirGym-RLGPU',
                 lambda config_name, num_actors, **kwargs: AirGymRLGPUEnv(config_name, num_actors, **kwargs))
 
 def get_args():
-    from sim2real.src.real_inference.src.utils import gymutil
+    from src.inference.src.utils import gymutil
 
     custom_parameters = [
         {"name": "--seed", "type": int, "default": 0, "required": False, "help":  "Random seed, if larger than 0 will overwrite the value in yaml config."},

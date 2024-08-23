@@ -1,5 +1,5 @@
 <launch>
-  <arg name="checkpoint" default="$(find inference)/src/nn/ppo_X152b_vel.pth"/>
+  <arg name="checkpoint" default="$(find inference)/src/nn/ppo_X152b_vel_240804.pth"/>
   <arg name="ctl_mode" default="vel"/>
   <arg name="file" default="$(find inference)/src/X152b_inference.yaml"/>
   <arg name="num_envs" default="1"/>

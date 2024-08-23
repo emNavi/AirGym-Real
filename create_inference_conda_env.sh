@@ -41,8 +41,8 @@ pushd "${ROOT_DIR}"
         exit 1
     fi
 
-    # install airgym package
-    pip install -e ..
+    # install torch
+    pip install torch==2.0.0 torchvision==0.15.1 torchaudio==2.0.1 --index-url https://download.pytorch.org/whl/cpu
 
 popd
 

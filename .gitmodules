@@ -1,0 +1,3 @@
+[submodule "src/control_for_gym"]
+	path = src/control_for_gym
+	url = git@github.com:emNavi/control_for_gym.git
