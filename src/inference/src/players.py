@@ -76,6 +76,7 @@ class CpuPlayerContinuous(PpoPlayerContinuous):
         self.target_state = torch.zeros((18), device=self.device)
 
         self.obs_sub = rospy.Subscriber('/mavros/local_position/odom', Odometry, self.callback)
+        # self.obs_sub = rospy.Subscriber('/vins_fusion/odometry', Odometry, self.callback)
         self.target_sub = rospy.Subscriber('/target_state', Float64MultiArray, self._callback)
         ctl_mode = self.ctl_mode = self.env_config.get('ctl_mode')
         
@@ -121,7 +122,7 @@ class CpuPlayerContinuous(PpoPlayerContinuous):
 
     def _callback(self, data):
         s = data.data
-        self.target_state = torch.tensor(data.data, device=self.device)
+        self.target_state = torch.tensor(s, device=self.device)
         # self.target_state = torch.tensor([s[0], s[1], s[2], s[3], s[4], s[5], s[6], s[7], s[8], s[9], s[10], s[11], s[12]], 
         #                                  device=self.device)
 

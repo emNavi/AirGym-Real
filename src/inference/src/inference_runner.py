@@ -23,6 +23,9 @@ from airgym.rl_games.runner import AirGymRLGPUEnv
 
 os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"] = "false"
 
+# register the inference environemnt
+from src.inference.src.envs.inference import inference
+task_registry.register("inference", inference, X152bPx4Cfg())
 
 env_configurations.register('X152b', {'env_creator': lambda **kwargs : task_registry.make_env('inference',args=Namespace(**kwargs)),
         'vecenv_type': 'AirGym-RLGPU'})
