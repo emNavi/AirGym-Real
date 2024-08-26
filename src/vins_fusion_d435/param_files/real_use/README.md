@@ -1,0 +1,1 @@
+# This folder is the real used parameters by this drone 

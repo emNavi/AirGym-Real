@@ -1,0 +1,6 @@
+<launch>
+  <!-- 将target_state传递给节点 -->
+  <node pkg="inference" type="target_pub.py" name="target_pub" output="screen">
+    <param name="target_state" type="yaml" value="[1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0,    0.0, 0.0, 1.0,  0., 0., 0., 0., 0., 0. ]" />
+  </node>
+</launch>

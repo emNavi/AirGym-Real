@@ -83,7 +83,6 @@ class CpuPlayerContinuous(PpoPlayerContinuous):
         if ctl_mode == "pos":
             self.action_pub = rospy.Publisher('/airgym/cmd', PositionTarget, queue_size=2000)
         elif ctl_mode == "vel":
-            # self.action_pub = rospy.Publisher('/airgym/cmd', PositionTarget, queue_size=2000)
             self.action_pub = rospy.Publisher('/airgym/cmd', Twist, queue_size=2000)
         elif ctl_mode == "atti":
             self.action_pub = rospy.Publisher('/airgym/cmd', AttitudeTarget, queue_size=2000)
