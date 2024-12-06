@@ -8,7 +8,7 @@ then
     echo "start ctrl_bridg"
     gnome-terminal -- bash -c "source devel/setup.bash;roslaunch control_for_gym ctrl_bridge.launch" && sleep 4;
     echo "start vins"
-    gnome-terminal -- bash -c "source devel/setup.bash;roslaunch vins d435_no_rviz.launch" && sleep 5;
+    gnome-terminal -- bash -c "source devel/setup.bash;roslaunch vins d435.launch" && sleep 5;
 else
     echo error
     exit 
