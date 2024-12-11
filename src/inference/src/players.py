@@ -159,33 +159,17 @@ class CpuPlayerContinuous(PpoPlayerContinuous):
             output_msg.yaw = action[3].cpu().numpy()
             output_msg.type_mask = IGNORE_VX | IGNORE_VY | IGNORE_VZ | IGNORE_AFX | IGNORE_AFY | IGNORE_AFZ | FORCE | IGNORE_YAW_RATE
         elif self.ctl_mode == "vel":
-            # output_msg = PositionTarget()
-            # output_msg.coordinate_frame = FRAME_LOCAL_NED
-            # # output_msg.velocity.x = action[0].cpu().numpy()
-            # # output_msg.velocity.y = action[1].cpu().numpy()
-            # # output_msg.velocity.z = action[2].cpu().numpy()
-            # # output_msg.yaw = action[3].cpu().numpy()
-            # output_msg.velocity.x = 0
-            # output_msg.velocity.y = -0.1
-            # output_msg.velocity.z = 1
-            # output_msg.yaw = 0
-            # output_msg.type_mask = IGNORE_PX | IGNORE_PY | IGNORE_PZ | IGNORE_AFX | IGNORE_AFY | IGNORE_AFZ | FORCE | IGNORE_YAW_RATE
-
             output_msg = Twist()
             output_msg.linear.x = action[0].cpu().numpy()
             output_msg.linear.y = action[1].cpu().numpy()
             output_msg.linear.z = action[2].cpu().numpy()
-
-            # output_msg.linear.x = 0
-            # output_msg.linear.y = 0
-            # output_msg.linear.z = -0.5
-            
         elif self.ctl_mode == "atti": # body_rate stores angular
             output_msg = AttitudeTarget()
-            output_msg.body_rate.x = action[0].cpu().numpy()
-            output_msg.body_rate.y = action[1].cpu().numpy()
-            output_msg.body_rate.z = action[2].cpu().numpy()
-            output_msg.thrust = action[3].cpu().numpy()
+            output_msg.orientation.x = action[1].cpu().numpy()
+            output_msg.orientation.y = action[2].cpu().numpy()
+            output_msg.orientation.z = action[3].cpu().numpy()
+            output_msg.orientation.w = action[0].cpu().numpy()
+            output_msg.thrust = action[4].cpu().numpy()
             output_msg.type_mask = IGNORE_ROLL_RATE | IGNORE_PITCH_RATE | IGNORE_YAW_RATE_
         elif self.ctl_mode == "rate":
             output_msg = AttitudeTarget()
