@@ -1,9 +1,8 @@
 #!/home/emnavi/miniconda3/envs/inference/bin/python
 
-from rl_games.common.player import BasePlayer
-from rl_games.algos_torch.running_mean_std import RunningMeanStd
-from rl_games.algos_torch.players import PpoPlayerContinuous
-from rl_games.common.tr_helpers import unsqueeze_obs
+from airgym.lib.agent.players import BasePlayer, A2CPlayer
+from airgym.lib.core.running_mean_std import RunningMeanStd
+from airgym.lib.utils.tr_helpers import unsqueeze_obs
 import gym
 import torch 
 from torch import nn
@@ -65,7 +64,7 @@ def quaternion_to_matrix(quat: torch.Tensor):
     
     return matrix
 
-class CpuPlayerContinuous(PpoPlayerContinuous):
+class CpuPlayerContinuous(A2CPlayer):
     def __init__(self, params):
         super().__init__(params)
         print("Running on", self.device)
@@ -73,21 +72,27 @@ class CpuPlayerContinuous(PpoPlayerContinuous):
         # initialize
         rospy.init_node('onboard_computing_node', anonymous=True)
 
-        self.target_state = torch.zeros((18), device=self.device)
+        self.target_state = torch.tensor([1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0], device=self.device)
 
         self.obs_sub = rospy.Subscriber('/mavros/local_position/odom', Odometry, self.callback)
         # self.obs_sub = rospy.Subscriber('/vins_fusion/odometry', Odometry, self.callback)
         self.target_sub = rospy.Subscriber('/target_state', Float64MultiArray, self._callback)
         ctl_mode = self.ctl_mode = self.env_config.get('ctl_mode')
+
+        self.action_pub = rospy.Publisher('/airgym/inference_result', Float64MultiArray, queue_size=2000)
         
         if ctl_mode == "pos":
-            self.action_pub = rospy.Publisher('/airgym/cmd', PositionTarget, queue_size=2000)
+            self.cmd_pub = rospy.Publisher('/airgym/cmd', PositionTarget, queue_size=2000)
+            self.action = torch.zeros(4, device=self.device)
         elif ctl_mode == "vel":
-            self.action_pub = rospy.Publisher('/airgym/cmd', Twist, queue_size=2000)
+            self.cmd_pub = rospy.Publisher('/airgym/cmd', Twist, queue_size=2000)
+            self.action = torch.zeros(4, device=self.device)
         elif ctl_mode == "atti":
-            self.action_pub = rospy.Publisher('/airgym/cmd', AttitudeTarget, queue_size=2000)
+            self.cmd_pub = rospy.Publisher('/airgym/cmd', AttitudeTarget, queue_size=2000)
+            self.action = torch.zeros(5, device=self.device)
         elif ctl_mode == "rate":
-            self.action_pub = rospy.Publisher('/airgym/cmd', AttitudeTarget, queue_size=2000)
+            self.cmd_pub = rospy.Publisher('/airgym/cmd', AttitudeTarget, queue_size=2000)
+            self.action = torch.zeros(4, device=self.device)
         else:
             pass
 
@@ -101,15 +106,18 @@ class CpuPlayerContinuous(PpoPlayerContinuous):
         has_masks_func = getattr(self.env, "has_action_mask", None) is not None
         if has_masks_func:
             self.has_masks = self.env.has_action_mask()
-        
-        need_init_rnn = self.is_rnn
-        if need_init_rnn:
-            self.init_rnn()
-            need_init_rnn = False
 
         self.is_tensor_obses = True
 
     def restore(self, fn):
+        time.sleep(2)
+        print(3)
+        time.sleep(1)
+        print(2)
+        time.sleep(1)        
+        print(1)
+        time.sleep(1)
+        print("go")
         checkpoint = torch_ext.load_checkpoint(fn)
         self.model.load_state_dict(checkpoint['model'])
         if self.normalize_input and 'running_mean_std' in checkpoint:
@@ -119,9 +127,15 @@ class CpuPlayerContinuous(PpoPlayerContinuous):
         if self.env is not None and env_state is not None:
             self.env.set_env_state(env_state)
 
+        print("#" * 60)
+        print("#" + " " * 15 + "Network has been LOADED !!!" + " " * 16 + "#")
+        print("#" * 60)
+
+
     def _callback(self, data):
         s = data.data
         self.target_state = torch.tensor(s, device=self.device)
+        # print(self.target_state)
         # self.target_state = torch.tensor([s[0], s[1], s[2], s[3], s[4], s[5], s[6], s[7], s[8], s[9], s[10], s[11], s[12]], 
         #                                  device=self.device)
 
@@ -142,13 +156,22 @@ class CpuPlayerContinuous(PpoPlayerContinuous):
         # print(root_matrix)
         assert root_matrix.shape[0] == 9
 
-        real_obs = torch.cat((root_matrix, pose_tensor, linvel_tensor, angvel_tensor)).unsqueeze(0)
+        
+        # real_obs = torch.cat((root_matrix, pose_tensor, linvel_tensor, angvel_tensor)).unsqueeze(0)
+
+        features = torch.rand(12, device=self.device)
+        real_obs = torch.cat((root_matrix, pose_tensor, linvel_tensor, angvel_tensor, self.action, features)).unsqueeze(0)
 
         # print(real_obs)
         # print(self.target_state)
         # print(real_obs - self.target_state)
-        action = self.inference(real_obs - self.target_state)
-        print(action)
+        real_obs[:, :18] -= self.target_state
+        action = self.inference(real_obs)
+        
+        self.action = action
+        inference_res = Float64MultiArray()
+        inference_res.data = action.cpu().numpy().tolist()
+        self.action_pub.publish(inference_res)
 
         # Create the output message
         if self.ctl_mode == "pos":
@@ -176,13 +199,13 @@ class CpuPlayerContinuous(PpoPlayerContinuous):
             output_msg.body_rate.x = action[0].cpu().numpy()
             output_msg.body_rate.y = action[1].cpu().numpy()
             output_msg.body_rate.z = action[2].cpu().numpy()
-            output_msg.thrust = action[3].cpu().numpy()
+            output_msg.thrust = action[3].cpu().numpy()*0.5 + 0.5
             output_msg.type_mask = IGNORE_ATTITUDE
         else:
             pass
         
         # Publish the message
-        self.action_pub.publish(output_msg)
+        self.cmd_pub.publish(output_msg)
 
         # 更新频率检测
         self.message_count += 1
@@ -214,3 +237,25 @@ class CpuPlayerContinuous(PpoPlayerContinuous):
 
     def env_step(self, env, actions):
         return super().env_step(env, actions)
+
+
+class LowPassFilter:
+    def __init__(self, alpha=0.05):
+        """
+        初始化低通滤波器
+        alpha: 滤波器的平滑系数，取值范围 [0, 1]。越接近 0 滤波越平滑，越接近 1 滤波效果越弱。
+        """
+        self.alpha = alpha
+        self.prev_value = None  # 上一次的滤波值
+
+    def filter(self, new_value):
+        """
+        对新值进行低通滤波
+        new_value: 输入的新的值
+        """
+        if self.prev_value is None:
+            self.prev_value = new_value  # 第一次调用时，不进行滤波
+        else:
+            self.prev_value = self.alpha * new_value + (1 - self.alpha) * self.prev_value
+        
+        return self.prev_value

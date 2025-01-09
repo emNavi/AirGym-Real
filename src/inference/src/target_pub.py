@@ -18,7 +18,7 @@ def target_pub(target_state):
     # Publish the message
     while not rospy.is_shutdown():
         pub.publish(state)
-        rospy.loginfo(state.data)
+        # rospy.loginfo(state.data)
         rate.sleep()
 
 if __name__ == '__main__':

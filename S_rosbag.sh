@@ -3,6 +3,7 @@
 # 自定义要录制的话题
 TOPICS=(
     "/airgym/cmd"
+    "/airgym/inference_result"
     "/ctrl_bridge/pos_cmd"
     "/ctrl_bridge/vel_sp_sub"
     "/mavlink/from"
@@ -138,7 +139,7 @@ TOPICS=(
     "/swarm_land"
     "/swarm_takeoff"
     "/target_state"
-
+    "/hover_thrust_pub"
 )
 
 # 输出文件名前缀（可选）

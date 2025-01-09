@@ -12,20 +12,20 @@ sys.path.insert(0, airgym_dir)
 yaml_path = os.path.join(script_dir, 'X152b_inference.yaml')
 
 from airgym.envs import *
-
 from argparse import Namespace
 
-from rl_games.torch_runner import Runner
-from rl_games.common import env_configurations, vecenv
+from airgym.lib.torch_runner import Runner
+from airgym.lib.utils import env_configurations, vecenv
 
 from src.inference.src.players import *
-from airgym.rl_games.runner import AirGymRLGPUEnv
+from airgym.lib.utils.vecenv import AirGymRLGPUEnv
 
 os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"] = "false"
 
 # register the inference environemnt
 from src.inference.src.envs.inference import inference
-task_registry.register("inference", inference, X152bPx4Cfg())
+# task_registry.register("inference", inference, X152bPx4Cfg())
+task_registry.register("inference", inference, X152bAvoidConfig())
 
 env_configurations.register('X152b', {'env_creator': lambda **kwargs : task_registry.make_env('inference',args=Namespace(**kwargs)),
         'vecenv_type': 'AirGym-RLGPU'})
@@ -147,7 +147,6 @@ def update_config(config, args):
 
     if args['num_envs'] > 0:
         config['params']['config']['num_actors'] = args['num_envs']
-        # config['params']['config']['num_envs'] = args['num_envs']
         config['params']['config']['env_config']['num_envs'] = args['num_envs']
 
     if args['seed'] > 0:
@@ -156,11 +155,19 @@ def update_config(config, args):
 
     return config
 
+def _restore(agent, args):
+    if 'checkpoint' in args and args['checkpoint'] is not None and args['checkpoint'] !='':
+        agent.restore(args['checkpoint'])
+
 class InferenceRunner(Runner):
     def __init__(self):
         super().__init__()
-        self.player_factory.register_builder('cpu_player', lambda **kwargs : CpuPlayerContinuous(**kwargs))
 
+    def run_play(self, args):
+        print('Started to play')
+        player = CpuPlayerContinuous(params=self.params)
+        _restore(player, args)
+        player.run()
 
 def main(args):
     config_name = args['file']

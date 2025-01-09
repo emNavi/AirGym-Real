@@ -1,7 +1,11 @@
 <launch>
   <!-- <arg name="checkpoint" default="$(find inference)/src/nn/ppo_X152b_vel.pth"/> -->
-  <arg name="checkpoint" default="$(find inference)/src/nn/ppo_X152b_rate.pth"/>
+  <!-- <arg name="checkpoint" default="$(find inference)/src/nn/ppo_X152b_atti.pth"/> -->
+  <!-- <arg name="checkpoint" default="$(find inference)/src/nn/ppo_X152b_rate.pth"/> -->
+  <!-- <arg name="checkpoint" default="$(find inference)/src/nn/hovering_30.pth"/> -->
+  <arg name="checkpoint" default="$(find inference)/src/nn/ppo_X152b_avoid_with_pose.pth"/>
   <arg name="ctl_mode" default="rate"/>
+  <!-- <arg name='task' default='X152b'/> -->
   <arg name="file" default="$(find inference)/src/X152b_inference.yaml"/>
   <arg name="num_envs" default="1"/>
 
@@ -9,6 +13,7 @@
   <param name="ctl_mode" value="$(arg ctl_mode)"/>
   <param name="file" value="$(arg file)"/>
   <param name="num_envs" value="$(arg num_envs)"/>
+  <!-- <param name='task' value="$(arg task)"/> -->
 
   <node name="inference" pkg="inference" type="inference_runner.py" output="screen"></node>
 </launch>
