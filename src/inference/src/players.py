@@ -110,14 +110,6 @@ class CpuPlayerContinuous(A2CPlayer):
         self.is_tensor_obses = True
 
     def restore(self, fn):
-        time.sleep(2)
-        print(3)
-        time.sleep(1)
-        print(2)
-        time.sleep(1)        
-        print(1)
-        time.sleep(1)
-        print("go")
         checkpoint = torch_ext.load_checkpoint(fn)
         self.model.load_state_dict(checkpoint['model'])
         if self.normalize_input and 'running_mean_std' in checkpoint:
