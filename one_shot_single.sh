@@ -14,4 +14,4 @@ else
     exit 
 fi
 
-echo "if you want to close this script, you need use : ./S_kill_one_shot.sh"
+echo "if you want to close this script, you need use : ./kill_one_shot.sh"

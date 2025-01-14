@@ -7,6 +7,8 @@ find_package(catkin REQUIRED COMPONENTS
   geometry_msgs
   mavros_msgs
   nav_msgs
+  sensor_msgs
+  cv_bridge
 )
 
 catkin_package()

@@ -3,7 +3,9 @@
   <!-- <arg name="checkpoint" default="$(find inference)/src/nn/ppo_X152b_atti.pth"/> -->
   <!-- <arg name="checkpoint" default="$(find inference)/src/nn/ppo_X152b_rate.pth"/> -->
   <!-- <arg name="checkpoint" default="$(find inference)/src/nn/hovering_30.pth"/> -->
-  <arg name="checkpoint" default="$(find inference)/src/nn/ppo_X152b_avoid_with_pose.pth"/>
+  <!-- <arg name="checkpoint" default="$(find inference)/src/nn/ppo_X152b_avoid_with_pose.pth"/> -->
+  <arg name="checkpoint" default="$(find inference)/src/nn/ppo_X152b_tracking_lemniscate_rate.pth"/>
+  <!-- <arg name="checkpoint" default="$(find inference)/src/nn/ppo_X152b_tracking_field_rate.pth"/> -->
   <arg name="ctl_mode" default="rate"/>
   <!-- <arg name='task' default='X152b'/> -->
   <arg name="file" default="$(find inference)/src/X152b_inference.yaml"/>

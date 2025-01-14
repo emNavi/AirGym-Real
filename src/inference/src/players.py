@@ -14,6 +14,10 @@ from geometry_msgs.msg import *
 from mavros_msgs.msg import *
 from nav_msgs.msg import Odometry
 from std_msgs.msg import Float64MultiArray
+from sensor_msgs.msg import Image
+
+import cv2
+from cv_bridge import CvBridge
 
 from src.inference.src.utils import torch_ext
 
@@ -75,6 +79,8 @@ class CpuPlayerContinuous(A2CPlayer):
         self.target_state = torch.tensor([1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0], device=self.device)
 
         self.obs_sub = rospy.Subscriber('/mavros/local_position/odom', Odometry, self.callback)
+        self.image_sub = rospy.Subscriber('/camera/depth/image_rect_raw', Image, self.depth_cb)
+        self.bridge = CvBridge()
         # self.obs_sub = rospy.Subscriber('/vins_fusion/odometry', Odometry, self.callback)
         self.target_sub = rospy.Subscriber('/target_state', Float64MultiArray, self._callback)
         ctl_mode = self.ctl_mode = self.env_config.get('ctl_mode')
@@ -110,14 +116,6 @@ class CpuPlayerContinuous(A2CPlayer):
         self.is_tensor_obses = True
 
     def restore(self, fn):
-        time.sleep(2)
-        print(3)
-        time.sleep(1)
-        print(2)
-        time.sleep(1)        
-        print(1)
-        time.sleep(1)
-        print("go")
         checkpoint = torch_ext.load_checkpoint(fn)
         self.model.load_state_dict(checkpoint['model'])
         if self.normalize_input and 'running_mean_std' in checkpoint:
@@ -130,6 +128,54 @@ class CpuPlayerContinuous(A2CPlayer):
         print("#" * 60)
         print("#" + " " * 15 + "Network has been LOADED !!!" + " " * 16 + "#")
         print("#" * 60)
+
+        self.start_t = rospy.Time.now().to_sec()
+
+    def depth_cb(self, msg):
+        try:
+            # 将 ROS 的 Image 消息转换为 NumPy 数组
+            depth_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding="passthrough")
+
+            # # 打印图像的形状
+            # rospy.loginfo("Depth Image Shape: {}".format(depth_image.shape))
+            # rospy.loginfo("Depth Image Type: {}".format(depth_image.dtype))
+
+
+            # # 获取中心像素的深度值（单位是毫米）
+            # center_x = depth_image.shape[1] // 2
+            # center_y = depth_image.shape[0] // 2
+            # center_depth = depth_image[center_y, center_x]
+            # rospy.loginfo("Center Pixel Depth: {:.2f} meters".format(center_depth / 1000.0))
+            # import matplotlib.pyplot as plt
+
+            # # ✅ 将深度值截取到 0 到 6 米的范围内
+            # depth_clipped = np.clip(depth_image, 0, 6000)
+            # # print(F"np.max(depth_image): {np.max(depth_image)}")
+            # # ✅ 归一化到 0-255
+            # depth_normalized = cv2.normalize(depth_clipped, None, 0, 255, cv2.NORM_MINMAX)
+
+            # # ✅ 转换为 uint8 类型
+            # depth_normalized = np.uint8(depth_normalized)
+
+            # # ✅ 将图像 resize 到 (212, 120)
+            # depth_resized = cv2.resize(depth_normalized, (212, 120), interpolation=cv2.INTER_AREA)
+
+            # # ✅ 应用伪彩色映射
+            # depth_colored = cv2.applyColorMap(depth_resized, cv2.COLORMAP_VIRIDIS)
+            # # 使用 Matplotlib 的 magma 颜色映射
+            # colored_image = plt.cm.magma(depth_image / 6000.0)  # 将深度值缩放到 [0, 1] 范围
+
+            # # 将结果转换为 OpenCV 格式 (BGR)
+            # colored_image = (colored_image[:, :, :3] * 255).astype(np.uint8)  # 保留 RGB 并转换为 [0, 255]
+
+            # # ✅ 显示图像
+            # cv2.imshow("Depth Image (0-6m)", colored_image)
+            
+            # cv2.waitKey(1)
+ 
+
+        except CvBridgeError as e:
+            rospy.logerr("CvBridge Error: {}".format(e))
 
 
     def _callback(self, data):
@@ -152,22 +198,52 @@ class CpuPlayerContinuous(A2CPlayer):
         angvel_tensor = torch.tensor([angvel.x, angvel.y, angvel.z], device=self.device)
 
         root_matrix = quaternion_to_matrix(quat_tensor[[3, 0, 1, 2]]).flatten()
-        # print(quat_tensor)
-        # print(root_matrix)
         assert root_matrix.shape[0] == 9
 
+        ##------------------- normal obs ----------------------##
+        # features = torch.rand(12, device=self.device)
+        # real_obs = torch.cat((root_matrix, pose_tensor, linvel_tensor, angvel_tensor, self.action, features)).unsqueeze(0)
+        # real_obs[:, :18] -= self.target_state
+
+        ##------------------- depth obs ----------------------##
+        # depth_image = torch.tensor([self.depth_image], device=self.device)
         
-        # real_obs = torch.cat((root_matrix, pose_tensor, linvel_tensor, angvel_tensor)).unsqueeze(0)
 
-        features = torch.rand(12, device=self.device)
-        real_obs = torch.cat((root_matrix, pose_tensor, linvel_tensor, angvel_tensor, self.action, features)).unsqueeze(0)
+        ##------------------- tracking obs ----------------------##
+        cur_t = rospy.Time.now().to_sec() - self.start_t
+        n_steps = 10
+        step_size = 5
+        scale = 0.25
+        dt = 0.01
+        seq_t = cur_t + torch.arange(n_steps, device=self.device) * step_size * dt
+        seq_t = seq_t * scale
 
-        # print(real_obs)
-        # print(self.target_state)
-        # print(real_obs - self.target_state)
-        real_obs[:, :18] -= self.target_state
+        ref_x = 3 * torch.sin(seq_t) / (1 + torch.cos(seq_t) ** 2)
+        ref_y = 3 * torch.sin(seq_t) * torch.cos(seq_t) / (1 + torch.cos(seq_t) ** 2)
+        ref_z = torch.ones_like(ref_x)
+        traj = torch.stack((ref_x, ref_y, ref_z), dim=-1)
+        related_pos = traj - pose_tensor
+        related_pos = related_pos.flatten()
+
+        # n_steps = 10
+        # step_size = 5
+        # scale = 1
+        # dt = 0.01
+        # seq_t = cur_t + torch.arange(n_steps, device=self.device) * step_size * dt
+        # seq_t = seq_t * scale
+
+        # ref_x = seq_t
+        # ref_y = 1/(1+torch.pow(.5*seq_t-2, 2))-.25
+        # ref_z = torch.ones_like(ref_x)
+        # traj = torch.stack((ref_x, ref_y, ref_z), dim=-1)
+        # related_pos = traj - pose_tensor
+        # related_pos = related_pos.flatten()
+
+        real_obs = torch.cat((root_matrix, pose_tensor, linvel_tensor, angvel_tensor, related_pos)).unsqueeze(0)
+
+
+        ##--------------------- inference --------------------------------##
         action = self.inference(real_obs)
-        
         self.action = action
         inference_res = Float64MultiArray()
         inference_res.data = action.cpu().numpy().tolist()
@@ -237,25 +313,3 @@ class CpuPlayerContinuous(A2CPlayer):
 
     def env_step(self, env, actions):
         return super().env_step(env, actions)
-
-
-class LowPassFilter:
-    def __init__(self, alpha=0.05):
-        """
-        初始化低通滤波器
-        alpha: 滤波器的平滑系数，取值范围 [0, 1]。越接近 0 滤波越平滑，越接近 1 滤波效果越弱。
-        """
-        self.alpha = alpha
-        self.prev_value = None  # 上一次的滤波值
-
-    def filter(self, new_value):
-        """
-        对新值进行低通滤波
-        new_value: 输入的新的值
-        """
-        if self.prev_value is None:
-            self.prev_value = new_value  # 第一次调用时，不进行滤波
-        else:
-            self.prev_value = self.alpha * new_value + (1 - self.alpha) * self.prev_value
-        
-        return self.prev_value
