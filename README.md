@@ -28,3 +28,46 @@ catkin_make
 - **send_target_state.sh**: send expected drone state.
 - **rosbag.sh**: record selected rostopics.
 - **kill_one_shot.sh**: kill all related pid.
+
+## Calibration
+Calibration is needed before use because all the state estimation comes from vins_fusion. Steps below is calobration for `vins_fusion`.
+
+Create an output directory at `~`:
+```bash
+mkdir ~/vins_output
+```
+
+Find `vins_fusion_d435/param_files/real_use/vins/vins_with_d435.yaml`, edit `estimate_extrinsic` to 1 before run `one_shot_single.sh`
+```
+# Extrinsic parameter between IMU and Camera.
+estimate_extrinsic: 0  # 0  Have an accurate extrinsic parameters. We will trust the following imu^R_cam, imu^T_cam, don't change it.
+                        # 1  Have an initial guess about extrinsic parameters. We will optimize around your initial guess.
+```
+then run `one_shot_single.sh` to launch camera and vins. 
+
+After initialization, slowly pick up the drone by hand and move it through a textured area at a low speed (<1 m/s). Typically, you can walk around the area in a circle and return to the starting point. Observe the output of the vision odometry on the ROS topic `/mavros/vision_pose/pose.pose.position`. If the resulting values are close to the initial values (x: 0, y: 0, z: 0) with deviations within the centimeter range, it indicates that Vins-Fusion is operating correctly.
+
+Use parameters generated in `~/vins_output` and copy it to replace corresponding part in `vins_fusion_d435/param_files/real_use/vins/vins_with_d435.yaml`, for example:
+```bash
+body_T_cam0: !!opencv-matrix
+   rows: 4
+   cols: 4
+   dt: d
+   data: [ 1.4891044568646539e-02, 6.8362959335264793e-03,
+       9.9986575191350757e-01, 3.7840729852448969e-02,
+       -9.9975608165935537e-01, -1.6210178102668449e-02,
+       1.5000243698423274e-02, 2.0274150716127610e-02,
+       1.6310548022273979e-02, -9.9984523561588712e-01,
+       6.5932419509737716e-03, 4.1220449189954857e-02, 0., 0., 0., 1. ]
+body_T_cam1: !!opencv-matrix
+   rows: 4
+   cols: 4
+   dt: d
+   data: [ 1.5289913963302260e-02, 7.2208531242852298e-03,
+       9.9985702868517767e-01, 3.1072342493410010e-02,
+       -9.9975052829224142e-01, -1.6172957303737467e-02,
+       1.5405084596829592e-02, -2.9047067859331231e-02,
+       1.6281882888008119e-02, -9.9984313506280009e-01,
+       6.9717686000185797e-03, 4.2984672415576880e-02, 0., 0., 0., 1. ]
+```
+> Note: After the calibration, must remenber to edit `estimate_extrinsic` back to 0!
