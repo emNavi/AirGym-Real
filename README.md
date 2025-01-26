@@ -10,7 +10,7 @@ AirGym-Real is a toolkit for quadrotor robot learning deployment, it is designed
 ## Usage
 ### Installation
 ```bash
-git clone git@github.com:emNavi/AirGym-Real.git
+git clone --recursive git@github.com:emNavi/AirGym-Real.git
 cd AirGym-Real
 ```
 Create conda environment and compile. Note that conda environment must be activated before `catkin_make`.
