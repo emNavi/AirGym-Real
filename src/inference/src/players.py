@@ -133,45 +133,31 @@ class CpuPlayerContinuous(A2CPlayer):
 
     def depth_cb(self, msg):
         try:
-            # 将 ROS 的 Image 消息转换为 NumPy 数组
             depth_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding="passthrough")
 
-            # # 打印图像的形状
-            # rospy.loginfo("Depth Image Shape: {}".format(depth_image.shape))
-            # rospy.loginfo("Depth Image Type: {}".format(depth_image.dtype))
-
-
-            # # 获取中心像素的深度值（单位是毫米）
-            # center_x = depth_image.shape[1] // 2
-            # center_y = depth_image.shape[0] // 2
-            # center_depth = depth_image[center_y, center_x]
-            # rospy.loginfo("Center Pixel Depth: {:.2f} meters".format(center_depth / 1000.0))
-            # import matplotlib.pyplot as plt
-
-            # # ✅ 将深度值截取到 0 到 6 米的范围内
-            # depth_clipped = np.clip(depth_image, 0, 6000)
-            # # print(F"np.max(depth_image): {np.max(depth_image)}")
-            # # ✅ 归一化到 0-255
-            # depth_normalized = cv2.normalize(depth_clipped, None, 0, 255, cv2.NORM_MINMAX)
-
-            # # ✅ 转换为 uint8 类型
-            # depth_normalized = np.uint8(depth_normalized)
-
-            # # ✅ 将图像 resize 到 (212, 120)
-            # depth_resized = cv2.resize(depth_normalized, (212, 120), interpolation=cv2.INTER_AREA)
-
-            # # ✅ 应用伪彩色映射
-            # depth_colored = cv2.applyColorMap(depth_resized, cv2.COLORMAP_VIRIDIS)
-            # # 使用 Matplotlib 的 magma 颜色映射
-            # colored_image = plt.cm.magma(depth_image / 6000.0)  # 将深度值缩放到 [0, 1] 范围
-
-            # # 将结果转换为 OpenCV 格式 (BGR)
-            # colored_image = (colored_image[:, :, :3] * 255).astype(np.uint8)  # 保留 RGB 并转换为 [0, 255]
-
-            # # ✅ 显示图像
-            # cv2.imshow("Depth Image (0-6m)", colored_image)
+            rospy.loginfo("Depth Image Shape: {}".format(depth_image.shape))
+            rospy.loginfo("Depth Image Type: {}".format(depth_image.dtype))
             
-            # cv2.waitKey(1)
+            center_x = depth_image.shape[1] // 2
+            center_y = depth_image.shape[0] // 2
+            center_depth = depth_image[center_y, center_x]
+            rospy.loginfo("Center Pixel Depth: {:.2f} meters".format(center_depth / 1000.0))
+            import matplotlib.pyplot as plt
+
+            depth_clipped = np.clip(depth_image, 0, 6000)
+            # print(F"np.max(depth_image): {np.max(depth_image)}")
+            depth_normalized = cv2.normalize(depth_clipped, None, 0, 255, cv2.NORM_MINMAX)
+
+            depth_normalized = np.uint8(depth_normalized)
+
+            depth_resized = cv2.resize(depth_normalized, (212, 120), interpolation=cv2.INTER_AREA)
+
+            depth_colored = cv2.applyColorMap(depth_resized, cv2.COLORMAP_VIRIDIS)
+            colored_image = plt.cm.magma(depth_image / 6000.0)  
+
+            colored_image = (colored_image[:, :, :3] * 255).astype(np.uint8)  
+            cv2.imshow(colored_image)
+            cv2.waitKey(1)
  
 
         except CvBridgeError as e:
@@ -213,7 +199,7 @@ class CpuPlayerContinuous(A2CPlayer):
         cur_t = rospy.Time.now().to_sec() - self.start_t
         n_steps = 10
         step_size = 5
-        scale = 0.25
+        scale = 0.25 #0.25
         dt = 0.01
         seq_t = cur_t + torch.arange(n_steps, device=self.device) * step_size * dt
         seq_t = seq_t * scale

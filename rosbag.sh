@@ -140,6 +140,15 @@ TOPICS=(
     "/swarm_takeoff"
     "/target_state"
     "/hover_thrust_pub"
+    "/camera/depth/camera_info"
+    "/camera/depth/image_rect_raw"
+    "/camera/extrinsics/depth_to_infra1"
+    "/camera/extrinsics/depth_to_infra2"
+    "/camera/infra1/camera_info"
+    "/camera/infra1/image_rect_raw"
+    "/camera/infra2/camera_info"
+    "/camera/infra2/image_rect_raw"
+    "/vins_fusion/image_track"
 )
 
 # 输出文件名前缀（可选）
